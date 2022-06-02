@@ -27,7 +27,7 @@ def ordinals(df):
     df['Street'] = [nan(convert,s) for s in df['Street']]
     
     # Alley
-    convert = {'NA' : 0, 'Grvl' : 1, 'Pave' : 2}
+    convert = {'NA' : 0, 'Grvl' : 1, 'Pave' : 1} # Making it yes/no for alley access
     df['Alley'] = [nan(convert,s) for s in df['Alley']]
     
     # LotShape
@@ -39,7 +39,7 @@ def ordinals(df):
     df['Utilities'] = [nan(convert,s) for s in df['Utilities']]
     
     # LandSlope
-    convert = {'Sev' : 1, 'Mod' : 2, 'Gtl' : 3}
+    convert = {'Gtl' : 1, 'Mod' : 2, 'Sev' : 3}
     df['LandSlope'] = [nan(convert,s) for s in df['LandSlope']]
     
     # ExterQual
@@ -90,6 +90,10 @@ def ordinals(df):
     convert = convert_main_NA
     df['FireplaceQu'] = [nan(convert,s) for s in df['FireplaceQu']]
     
+    # GarageType
+    convert = {'NA' : 0, 'Detchd' : 1, 'CarPort' : 1, 'BuiltIn' : 2, 'Basment' : 2, 'Attchd' : 2}
+    df['GarageType'] = [nan(convert,s) for s in df['GarageType']]
+    
     # GarageFinish
     convert = {'NA' : 0, 'Unf' : 1, 'RFn' : 2, 'Fin' : 3}
     df['GarageFinish'] = [nan(convert,s) for s in df['GarageFinish']]
@@ -109,3 +113,60 @@ def ordinals(df):
     # Fence
     convert = {'NA' : 0, 'MnWw' : 1, 'GdWo' : 2, 'MnPrv' : 3, 'GdPrv' : 4}
     df['Fence'] = [nan(convert,s) for s in df['Fence']]
+    
+    # MiscFeature
+    convert = {'NA' : 0, 'Elev' : 1, 'Gar2' : 1, 'Shed' : 1, 'TenC' : 1}
+    df['MiscFeature'] = [nan(convert,s) for s in df['MiscFeature']]
+    
+# Impute variables
+def impute(df):
+    # LotFrontage
+    return
+
+# Processes variables with standard transformations and scalings
+def process(df):
+    ## SalePrice
+    if 'SalePrice' in df.columns:
+        df['SalePrice'] = np.log(df['SalePrice'])
+        
+    ## Street
+    df.drop(columns='Street', inplace=True)
+    
+    ## Utilities
+    df.drop(columns='Utilities', inplace=True)
+    
+    ## Lot
+    df['LotArea'] = np.log(df['LotArea'])
+    df['LotFrontage'] = np.log(df['LotFrontage'])
+    
+    ## Porch
+    # Porch square footage, log1p scaled
+    df['PorchSQ'] = np.log(df['OpenPorchSF'] + df['EnclosedPorch'] + df['3SsnPorch'] + df['ScreenPorch'] + 1)
+    # Ordinal: 0 = no porch, 1 = basic porch, 2 = enclosed porch
+    df['Porch'] = 0
+    df.loc[df['PorchSQ'] > 0,'Porch'] = 1
+    df.loc[df['EnclosedPorch'] + df['3SsnPorch'] + df['ScreenPorch'] > 0,'Porch'] = 2
+    # Delete old variables
+    df.drop(columns=['OpenPorchSF','EnclosedPorch','3SsnPorch','ScreenPorch'], inplace=True)
+    
+    ## Pool and MiscFeature
+    df.loc[df['PoolQC'] > 0, 'MiscFeature'] = 1
+    df.drop(columns=['PoolArea','PoolQC'], inplace=True)
+    
+    ## Garage
+    df.drop(columns=['GarageArea','GarageCond'], inplace=True)
+    
+    ## Basement
+    # Rather than have 2 sets of basement area variables, I'll just keep the one with the better quality
+    # Loses some detail, but should capture the basic idea
+    df['BsmtFinType'] = df[['BsmtFinType1','BsmtFinType2']].max(axis=1)
+    pick = df['BsmtFinType1'] > df['BsmtFinType2']
+    df.loc[pick, 'BsmtFinSF'] = df.loc[pick, 'BsmtFinSF1']
+    df.loc[~pick, 'BsmtFinSF'] = df.loc[~pick, 'BsmtFinSF2']
+    
+    ## Bathrooms
+    df['FullBath'] = df['FullBath'] + df['BsmtFullBath']
+    df['HalfBath'] = df['HalfBath'] + df['BsmtHalfBath']
+    df.drop(columns=['BsmtFullBath','BsmtHalfBath'], inplace=True)
+    
+    
