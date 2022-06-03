@@ -11,6 +11,10 @@ from sklearn.preprocessing import StandardScaler
 # No .fit() method, just use fit_transform()
 class Preprocess():
     
+    # Undo the StandardScaler() and log1p on the SalePrice column
+    def unscale(self,y):
+        return np.exp(self.ScalerTarget.inverse_transform(y)) - 1
+    
     # Preprocesses the training data, and fits the imputers to it along the way
     def fit_transform(self,train_data):
         
